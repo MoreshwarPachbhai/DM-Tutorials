@@ -1,21 +1,24 @@
+import os
+import subprocess
 import streamlit as st
 import joblib
-from preprocess import clean_text
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 
-# -----------------------------
-# Page Configuration
-# -----------------------------
+from preprocess import clean_text
+
 st.set_page_config(
     page_title="Election Sentiment Analysis",
     page_icon="🗳️",
     layout="wide"
 )
 
-# -----------------------------
-# Load Model
-# -----------------------------
+# Automatically train model
+if not os.path.exists("model.pkl"):
+
+    with st.spinner("Training model for first time..."):
+
+        subprocess.run(["python", "train_model.py"], check=True)
+
+# Load model
 model = joblib.load("model.pkl")
 vectorizer = joblib.load("vectorizer.pkl")
 
