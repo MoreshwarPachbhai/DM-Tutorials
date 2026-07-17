@@ -1,31 +1,40 @@
+import os
 import random
 import pandas as pd
+
+# -------------------------------------------------
+# Project Directory
+# -------------------------------------------------
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATASET_PATH = os.path.join(BASE_DIR, "student_dropout.csv")
+
+# -------------------------------------------------
+# Generate Dataset
+# -------------------------------------------------
 
 rows = []
 
 for _ in range(1000):
 
-    attendance = random.randint(40,100)
-    grades = random.randint(35,100)
-    study_hours = random.randint(1,8)
-    backlogs = random.randint(0,6)
-    income = random.choice(["Low","Medium","High"])
-    scholarship = random.choice(["Yes","No"])
-    internet = random.choice(["Yes","No"])
-    gender = random.choice(["Male","Female"])
+    attendance = random.randint(40, 100)
+    grades = random.randint(35, 100)
+    study_hours = random.randint(1, 8)
+    backlogs = random.randint(0, 6)
+
+    income = random.choice(["Low", "Medium", "High"])
+    scholarship = random.choice(["Yes", "No"])
+    internet = random.choice(["Yes", "No"])
+    gender = random.choice(["Male", "Female"])
 
     dropout = 0
 
-    if attendance < 60:
-        dropout = 1
-
-    if grades < 50:
-        dropout = 1
-
-    if backlogs >= 3:
-        dropout = 1
-
-    if study_hours <= 2:
+    if (
+        attendance < 60
+        or grades < 50
+        or backlogs >= 3
+        or study_hours <= 2
+    ):
         dropout = 1
 
     rows.append([
@@ -54,6 +63,10 @@ columns = [
 
 df = pd.DataFrame(rows, columns=columns)
 
-df.to_csv("student_dropout.csv", index=False)
+# -------------------------------------------------
+# Save Dataset
+# -------------------------------------------------
 
-print("Dataset Generated Successfully")
+df.to_csv(DATASET_PATH, index=False)
+
+print(f"Dataset generated successfully: {DATASET_PATH}")

@@ -50,41 +50,52 @@ h1{
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# AUTO GENERATE DATASET
+# PROJECT DIRECTORY
 # -------------------------------------------------
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 python = sys.executable
 
-if not os.path.exists("student_dropout.csv"):
+dataset_path = os.path.join(BASE_DIR, "student_dropout.csv")
+model_path = os.path.join(BASE_DIR, "model.pkl")
+encoder_path = os.path.join(BASE_DIR, "label_encoders.pkl")
+
+# -------------------------------------------------
+# GENERATE DATASET
+# -------------------------------------------------
+
+if not os.path.exists(dataset_path):
 
     with st.spinner("Generating Dataset..."):
 
         subprocess.run(
-            [python, "generate_dataset.py"],
+            [python, os.path.join(BASE_DIR, "generate_dataset.py")],
             check=True
         )
 
 # -------------------------------------------------
-# AUTO TRAIN MODEL
+# TRAIN MODEL
 # -------------------------------------------------
 
-if not os.path.exists("model.pkl"):
+if not os.path.exists(model_path):
 
     with st.spinner("Training Machine Learning Model..."):
 
         subprocess.run(
-            [python, "train_model.py"],
+            [python, os.path.join(BASE_DIR, "train_model.py")],
             check=True
         )
 
 # -------------------------------------------------
-# LOAD FILES
+# LOAD MODEL
 # -------------------------------------------------
 
-model = joblib.load("model.pkl")
-encoders = joblib.load("label_encoders.pkl")
+model = joblib.load(model_path)
 
-df = pd.read_csv("student_dropout.csv")
+encoders = joblib.load(encoder_path)
+
+df = pd.read_csv(dataset_path)
 
 # -------------------------------------------------
 # HEADER
