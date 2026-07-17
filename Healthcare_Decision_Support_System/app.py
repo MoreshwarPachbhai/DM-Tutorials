@@ -14,7 +14,7 @@ st.set_page_config(
 
 # ---------------- Train Model if Not Found ----------------
 MODEL_PATH = "models/model.pkl"
-DATA_PATH = "data/heart.csv"
+DATA_PATH = "heart.csv"
 
 if not os.path.exists(MODEL_PATH):
 

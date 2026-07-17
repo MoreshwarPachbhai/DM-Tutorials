@@ -8,7 +8,7 @@ from sklearn.ensemble import RandomForestClassifier
 os.makedirs("models", exist_ok=True)
 
 # Load Dataset
-df = pd.read_csv("data/heart.csv")
+df = pd.read_csv("heart.csv")
 
 X = df.drop("target", axis=1)
 y = df["target"]
