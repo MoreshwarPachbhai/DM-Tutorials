@@ -1,6 +1,9 @@
 import streamlit as st
-import pickle
+import pandas as pd
 import numpy as np
+import pickle
+import os
+from sklearn.ensemble import RandomForestClassifier
 
 # ---------------- Page Config ----------------
 st.set_page_config(
@@ -9,8 +12,32 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------------- Train Model if Not Found ----------------
+MODEL_PATH = "models/model.pkl"
+DATA_PATH = "data/heart.csv"
+
+if not os.path.exists(MODEL_PATH):
+
+    os.makedirs("models", exist_ok=True)
+
+    df = pd.read_csv(DATA_PATH)
+
+    X = df.drop("target", axis=1)
+    y = df["target"]
+
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42
+    )
+
+    model.fit(X, y)
+
+    with open(MODEL_PATH, "wb") as f:
+        pickle.dump(model, f)
+
 # ---------------- Load Model ----------------
-model = pickle.load(open("models/model.pkl", "rb"))
+with open(MODEL_PATH, "rb") as f:
+    model = pickle.load(f)
 
 # ---------------- Custom CSS ----------------
 st.markdown("""
@@ -33,11 +60,8 @@ st.markdown("""
     font-size:18px;
 }
 
-.box{
-    padding:20px;
-    border-radius:15px;
-    background:#ffffff;
-    box-shadow:0px 0px 15px rgba(0,0,0,0.1);
+.block-container{
+    padding-top:2rem;
 }
 
 </style>
@@ -45,23 +69,34 @@ st.markdown("""
 
 # ---------------- Header ----------------
 st.markdown("<div class='title'>🏥 Healthcare Decision Support System</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>AI Based Heart Disease Prediction using Data Mining</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>AI-Based Heart Disease Prediction using Data Mining</div>", unsafe_allow_html=True)
 
 st.write("")
 
 # ---------------- Sidebar ----------------
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2966/2966484.png", width=120)
+st.sidebar.title("🩺 About")
 
-st.sidebar.header("About")
+st.sidebar.success("""
+Healthcare Decision Support System
 
-st.sidebar.info("""
-This system predicts the likelihood of Heart Disease
-using a Random Forest Classification model.
+✔ Random Forest Classifier
 
-Developed for Data Mining Mini Project.
+✔ Predicts Heart Disease Risk
+
+✔ Built using Python & Streamlit
 """)
 
-# ---------------- Input Layout ----------------
+st.sidebar.info("""
+**Dataset**
+
+Heart Disease Dataset
+
+**Algorithm**
+
+Random Forest Classification
+""")
+
+# ---------------- Input ----------------
 left, right = st.columns(2)
 
 with left:
@@ -70,8 +105,10 @@ with left:
 
     age = st.slider("Age",20,100,40)
 
-    sex = st.selectbox("Gender",
-                       ["Male","Female"])
+    sex = st.selectbox(
+        "Gender",
+        ["Male","Female"]
+    )
 
     cp = st.selectbox(
         "Chest Pain Type",
@@ -132,10 +169,10 @@ with right:
         [0,1,2,3]
     )
 
-# ---------------- Convert Inputs ----------------
-sex = 1 if sex=="Male" else 0
-fbs = 1 if fbs=="Yes" else 0
-exang = 1 if exang=="Yes" else 0
+# ---------------- Convert ----------------
+sex = 1 if sex == "Male" else 0
+fbs = 1 if fbs == "Yes" else 0
+exang = 1 if exang == "Yes" else 0
 
 # ---------------- Predict ----------------
 st.write("")
@@ -163,17 +200,15 @@ if st.button("🔍 Predict Heart Disease", use_container_width=True):
 
     st.divider()
 
-    col1, col2 = st.columns(2)
+    c1, c2 = st.columns(2)
 
-    with col1:
-
+    with c1:
         st.metric(
             "Healthy Probability",
             f"{probability[0]*100:.2f}%"
         )
 
-    with col2:
-
+    with c2:
         st.metric(
             "Disease Probability",
             f"{probability[1]*100:.2f}%"
@@ -183,35 +218,37 @@ if st.button("🔍 Predict Heart Disease", use_container_width=True):
 
     if prediction == 1:
 
-        st.error("⚠️ High Risk of Heart Disease")
+        st.error("⚠ High Risk of Heart Disease")
 
-        st.progress(int(probability[1]*100))
+        st.progress(float(probability[1]))
 
-        st.markdown("""
-### Recommendation
+        st.markdown("### 🩺 Recommendations")
 
+        st.warning("""
 - Consult a Cardiologist
-- Maintain Healthy Diet
 - Exercise Regularly
-- Avoid Smoking
+- Reduce Cholesterol
 - Monitor Blood Pressure
+- Stop Smoking
+- Follow Healthy Diet
 """)
 
     else:
 
         st.success("✅ Low Risk of Heart Disease")
 
-        st.progress(int(probability[0]*100))
+        st.progress(float(probability[0]))
 
-        st.markdown("""
-### Recommendation
+        st.markdown("### 💚 Recommendations")
 
+        st.info("""
 - Continue Healthy Lifestyle
-- Regular Medical Checkups
+- Regular Exercise
 - Balanced Diet
-- Daily Exercise
+- Annual Health Checkup
+- Maintain Healthy Weight
 """)
 
 st.divider()
 
-st.caption("© Healthcare Decision Support System | Data Mining Mini Project")
+st.caption("© 2026 Healthcare Decision Support System | Data Mining Mini Project")
