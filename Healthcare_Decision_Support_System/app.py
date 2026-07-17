@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
-import os
+from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 
 # ---------------- Page Config ----------------
@@ -12,13 +12,20 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------------- File Paths ----------------
+BASE_DIR = Path(__file__).resolve().parent
+
+DATA_PATH = BASE_DIR / "heart.csv"
+MODEL_PATH = BASE_DIR / "models" / "model.pkl"
+
 # ---------------- Train Model if Not Found ----------------
-MODEL_PATH = "models/model.pkl"
-DATA_PATH = "heart.csv"
+if not MODEL_PATH.exists():
 
-if not os.path.exists(MODEL_PATH):
+    MODEL_PATH.parent.mkdir(exist_ok=True)
 
-    os.makedirs("models", exist_ok=True)
+    if not DATA_PATH.exists():
+        st.error(f"Dataset not found: {DATA_PATH}")
+        st.stop()
 
     df = pd.read_csv(DATA_PATH)
 
@@ -34,6 +41,7 @@ if not os.path.exists(MODEL_PATH):
 
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(model, f)
+
 
 # ---------------- Load Model ----------------
 with open(MODEL_PATH, "rb") as f:
