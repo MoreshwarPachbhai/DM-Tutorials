@@ -6,34 +6,53 @@ import plotly.express as px
 from utils import load_data
 from model import train_model
 
-# Base directory of this file
+# ---------------- Base Directory ----------------
 BASE_DIR = Path(__file__).resolve().parent
 
+# ---------------- Page Config ----------------
 st.set_page_config(
     page_title="Digital Payment Fraud Detection",
     page_icon="💳",
     layout="wide"
 )
 
-# Load CSS
-with open(BASE_DIR / "style.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+# ---------------- Load CSS ----------------
+css_file = BASE_DIR / "style.css"
 
-df = load_data()
-model = train_model(df)
+if css_file.exists():
+    with open(css_file, encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+else:
+    st.warning("⚠ style.css not found.")
 
+# ---------------- Load Dataset ----------------
+try:
+    df = load_data()
+except Exception as e:
+    st.error(f"❌ Unable to load dataset.\n\n{e}")
+    st.stop()
+
+# ---------------- Train Model ----------------
+try:
+    model = train_model(df)
+except Exception as e:
+    st.error(f"❌ Model training failed.\n\n{e}")
+    st.stop()
+
+# ---------------- Dashboard ----------------
 st.title("💳 Digital Payment Fraud Detection using Anomaly Detection")
 
-st.write("---")
+st.divider()
 
 col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("Transactions", len(df))
-col2.metric("Average Amount", f"₹{df.Amount.mean():.0f}")
-col3.metric("Highest Amount", f"₹{df.Amount.max()}")
-col4.metric("Low Risk", len(df[df.LocationRisk == 0]))
+col2.metric("Average Amount", f"₹{df['Amount'].mean():.0f}")
+col3.metric("Highest Amount", f"₹{df['Amount'].max():.0f}")
+col4.metric("Safe Transactions", len(df[df["LocationRisk"] == 0]))
 
-st.write("## Transaction Analysis")
+# ---------------- Charts ----------------
+st.subheader("📊 Transaction Analysis")
 
 c1, c2 = st.columns(2)
 
@@ -41,8 +60,8 @@ with c1:
     fig = px.histogram(
         df,
         x="Amount",
-        nbins=10,
         color="TransactionType",
+        nbins=10,
         title="Transaction Amount Distribution"
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -54,25 +73,26 @@ with c2:
         y="Amount",
         color="LocationRisk",
         size="Amount",
-        title="Time vs Amount"
+        title="Transaction Time vs Amount"
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-st.write("---")
+st.divider()
 
-st.header("Fraud Prediction")
+# ---------------- Prediction ----------------
+st.header("🔍 Fraud Prediction")
 
 left, right = st.columns(2)
 
 with left:
     amount = st.number_input(
-        "Amount",
-        100,
-        100000,
-        5000
+        "Transaction Amount (₹)",
+        min_value=100,
+        max_value=100000,
+        value=5000
     )
 
-    time = st.slider(
+    hour = st.slider(
         "Transaction Hour",
         0,
         23,
@@ -93,10 +113,11 @@ with right:
 transaction = 0 if ttype == "UPI" else 1
 risk = 0 if location == "Safe" else 1
 
-if st.button("Predict Fraud"):
+if st.button("🚀 Predict Fraud", use_container_width=True):
+
     sample = pd.DataFrame({
         "Amount": [amount],
-        "Time": [time],
+        "Time": [hour],
         "TransactionType": [transaction],
         "LocationRisk": [risk]
     })
@@ -108,8 +129,9 @@ if st.button("Predict Fraud"):
     else:
         st.success("✅ Genuine Transaction")
 
-st.write("---")
+st.divider()
 
-st.subheader("Dataset")
+# ---------------- Dataset ----------------
+st.subheader("📄 Dataset")
 
 st.dataframe(df, use_container_width=True)
