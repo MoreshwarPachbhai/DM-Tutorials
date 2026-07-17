@@ -27,6 +27,7 @@ similarity_df = pd.DataFrame(
 # ---------------- Recommendation Function ----------------
 def recommend(movie_name):
 
+    # Find selected movie
     movie = movies[movies["title"] == movie_name]
 
     if movie.empty:
@@ -37,10 +38,12 @@ def recommend(movie_name):
     if movie_id not in similarity_df.columns:
         return pd.DataFrame()
 
+    # Similarity scores
     scores = similarity_df[movie_id].sort_values(ascending=False)
 
     recommendations = []
 
+    # Skip first movie (itself)
     for mid in scores.index[1:7]:
 
         movie_info = movies[movies["movieId"] == mid]
@@ -48,9 +51,11 @@ def recommend(movie_name):
         if movie_info.empty:
             continue
 
+        movie_info = movie_info.iloc[0]
+
         recommendations.append({
-            "Movie": movie_info.iloc[0]["title"],
-            "Genre": movie_info.iloc[0]["genre"],
+            "Movie": movie_info["title"],
+            "Genre": movie_info["genre"] if "genre" in movie_info.index else "N/A",
             "Similarity": round(float(scores[mid]), 2)
         })
 
