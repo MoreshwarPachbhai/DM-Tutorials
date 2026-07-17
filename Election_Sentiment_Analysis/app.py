@@ -1,31 +1,52 @@
 import os
-import subprocess
 import streamlit as st
 import joblib
 
 from preprocess import clean_text
+from train_model import train_model
 
+# -----------------------------
+# Page Configuration
+# -----------------------------
 st.set_page_config(
     page_title="Election Sentiment Analysis",
     page_icon="🗳️",
     layout="wide"
 )
 
-# Automatically train model
-if not os.path.exists("model.pkl"):
+# -----------------------------
+# Paths
+# -----------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    with st.spinner("Training model for first time..."):
+MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+VECTORIZER_PATH = os.path.join(BASE_DIR, "vectorizer.pkl")
 
-        subprocess.run(["python", "train_model.py"], check=True)
 
-# Load model
-model = joblib.load("model.pkl")
-vectorizer = joblib.load("vectorizer.pkl")
+# -----------------------------
+# Load or Train Model
+# -----------------------------
+@st.cache_resource
+def load_model():
+
+    if not os.path.exists(MODEL_PATH) or not os.path.exists(VECTORIZER_PATH):
+
+        with st.spinner("Training model for first time... Please wait..."):
+            train_model()
+
+    model = joblib.load(MODEL_PATH)
+    vectorizer = joblib.load(VECTORIZER_PATH)
+
+    return model, vectorizer
+
+
+model, vectorizer = load_model()
 
 # -----------------------------
 # Title
 # -----------------------------
 st.title("🗳️ Election Sentiment Analysis")
+
 st.markdown("---")
 
 st.write(
@@ -48,6 +69,7 @@ if st.button("Predict Sentiment"):
 
     if user_input.strip() == "":
         st.warning("Please enter some text.")
+
     else:
 
         cleaned = clean_text(user_input)
@@ -74,8 +96,7 @@ if st.button("Predict Sentiment"):
             st.info(f"😐 Neutral ({confidence:.2f}%)")
 
         st.write("### Cleaned Text")
+
         st.code(cleaned)
 
-        # How to run
-        # cd Election_Sentiment_Analysis
-        # streamlit run app.py
+        st.write(f"### Confidence : {confidence:.2f}%")
