@@ -1,217 +1,436 @@
-import streamlit as st
-import pandas as pd
+import os
+import sys
+import subprocess
 import joblib
+import pandas as pd
+import streamlit as st
+import plotly.express as px
 
-# -------------------------------
-# Page Configuration
-# -------------------------------
+# -------------------------------------------------
+# PAGE CONFIG
+# -------------------------------------------------
 st.set_page_config(
     page_title="Student Dropout Prediction",
     page_icon="🎓",
     layout="wide"
 )
 
-# -------------------------------
-# Load Model
-# -------------------------------
+# -------------------------------------------------
+# CUSTOM CSS
+# -------------------------------------------------
+st.markdown("""
+<style>
+
+.main{
+    background-color:#f8f9fa;
+}
+
+h1{
+    color:#1565C0;
+    text-align:center;
+}
+
+.stButton>button{
+    width:100%;
+    height:50px;
+    background:#1565C0;
+    color:white;
+    border-radius:10px;
+    font-size:18px;
+}
+
+.metric-card{
+    background:white;
+    padding:15px;
+    border-radius:12px;
+    box-shadow:0px 0px 8px rgba(0,0,0,0.15);
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# -------------------------------------------------
+# AUTO GENERATE DATASET
+# -------------------------------------------------
+
+python = sys.executable
+
+if not os.path.exists("student_dropout.csv"):
+
+    with st.spinner("Generating Dataset..."):
+
+        subprocess.run(
+            [python, "generate_dataset.py"],
+            check=True
+        )
+
+# -------------------------------------------------
+# AUTO TRAIN MODEL
+# -------------------------------------------------
+
+if not os.path.exists("model.pkl"):
+
+    with st.spinner("Training Machine Learning Model..."):
+
+        subprocess.run(
+            [python, "train_model.py"],
+            check=True
+        )
+
+# -------------------------------------------------
+# LOAD FILES
+# -------------------------------------------------
+
 model = joblib.load("model.pkl")
 encoders = joblib.load("label_encoders.pkl")
 
-# -------------------------------
-# Title
-# -------------------------------
+df = pd.read_csv("student_dropout.csv")
+
+# -------------------------------------------------
+# HEADER
+# -------------------------------------------------
+
 st.title("🎓 Student Dropout Prediction System")
-st.write("Predict whether a student is likely to **Continue** or **Drop Out**.")
 
-st.divider()
-
-# -------------------------------
-# Sidebar
-# -------------------------------
-st.sidebar.header("About")
-
-st.sidebar.info(
-    """
-    Machine Learning Model:
-    - Random Forest Classifier
-
-    Features Used:
-    - Attendance
-    - Grades
-    - Study Hours
-    - Backlogs
-    - Family Income
-    - Scholarship
-    - Internet
-    - Gender
-    """
+st.markdown(
+"""
+This application predicts whether a student is **likely to continue**
+or **drop out** using a Machine Learning Random Forest Classifier.
+"""
 )
 
-# -------------------------------
-# Input Form
-# -------------------------------
-col1, col2 = st.columns(2)
-
-with col1:
-
-    attendance = st.slider(
-        "Attendance (%)",
-        0,
-        100,
-        75
-    )
-
-    grades = st.slider(
-        "Average Grades",
-        0,
-        100,
-        70
-    )
-
-    study_hours = st.slider(
-        "Study Hours / Day",
-        1,
-        10,
-        4
-    )
-
-    backlogs = st.slider(
-        "Backlogs",
-        0,
-        10,
-        0
-    )
-
-with col2:
-
-    family_income = st.selectbox(
-        "Family Income",
-        ["Low", "Medium", "High"]
-    )
-
-    scholarship = st.selectbox(
-        "Scholarship",
-        ["Yes", "No"]
-    )
-
-    internet = st.selectbox(
-        "Internet Access",
-        ["Yes", "No"]
-    )
-
-    gender = st.selectbox(
-        "Gender",
-        ["Male", "Female"]
-    )
-
 st.divider()
 
-# -------------------------------
-# Prediction
-# -------------------------------
-if st.button("Predict"):
+# -------------------------------------------------
+# SIDEBAR
+# -------------------------------------------------
 
-    income = encoders["FamilyIncome"].transform([family_income])[0]
-    scholar = encoders["Scholarship"].transform([scholarship])[0]
-    net = encoders["Internet"].transform([internet])[0]
-    gen = encoders["Gender"].transform([gender])[0]
+st.sidebar.title("Navigation")
 
-    data = pd.DataFrame(
-        [[
-            attendance,
-            grades,
-            study_hours,
-            backlogs,
-            income,
-            scholar,
-            net,
-            gen
-        ]],
-        columns=[
-            "Attendance",
-            "Grades",
-            "StudyHours",
-            "Backlogs",
-            "FamilyIncome",
-            "Scholarship",
-            "Internet",
-            "Gender"
-        ]
+page = st.sidebar.radio(
+    "Select",
+    [
+        "Dashboard",
+        "Prediction",
+        "Batch Prediction"
+    ]
+)
+
+st.sidebar.divider()
+
+st.sidebar.success("Model : Random Forest")
+
+st.sidebar.info(
+"""
+Features
+
+✔ Attendance
+
+✔ Grades
+
+✔ Study Hours
+
+✔ Backlogs
+
+✔ Family Income
+
+✔ Scholarship
+
+✔ Internet
+
+✔ Gender
+"""
+)
+
+# -------------------------------------------------
+# DASHBOARD
+# -------------------------------------------------
+
+if page == "Dashboard":
+
+    st.header("📊 Dashboard")
+
+    c1,c2,c3,c4 = st.columns(4)
+
+    total = len(df)
+
+    dropout = int(df["Dropout"].sum())
+
+    continue_students = total-dropout
+
+    rate = dropout/total*100
+
+    c1.metric(
+        "Total Students",
+        total
     )
 
-    prediction = model.predict(data)[0]
+    c2.metric(
+        "Continue",
+        continue_students
+    )
 
-    probability = model.predict_proba(data)[0]
+    c3.metric(
+        "Dropouts",
+        dropout
+    )
 
-    dropout_probability = probability[1] * 100
-    continue_probability = probability[0] * 100
+    c4.metric(
+        "Dropout %",
+        f"{rate:.2f}%"
+    )
 
-    st.subheader("Prediction Result")
+    st.divider()
 
-    if prediction == 1:
+    col1,col2 = st.columns(2)
 
-        st.error("⚠ Student is likely to DROP OUT")
+    with col1:
 
-    else:
-
-        st.success("✅ Student is likely to CONTINUE")
-
-    st.write("### Probability")
-
-    st.progress(int(max(dropout_probability, continue_probability)))
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-
-        st.metric(
-            "Continue Probability",
-            f"{continue_probability:.2f}%"
+        fig = px.pie(
+            df,
+            names=df["Dropout"].map({
+                0:"Continue",
+                1:"Dropout"
+            }),
+            title="Student Distribution"
         )
 
-    with col4:
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
-        st.metric(
-            "Dropout Probability",
-            f"{dropout_probability:.2f}%"
+    with col2:
+
+        fig2 = px.histogram(
+            df,
+            x="Attendance",
+            nbins=20,
+            title="Attendance Distribution"
+        )
+
+        st.plotly_chart(
+            fig2,
+            use_container_width=True
+        )
+
+    fig3 = px.histogram(
+        df,
+        x="Grades",
+        nbins=20,
+        title="Grades Distribution"
+    )
+
+    st.plotly_chart(
+        fig3,
+        use_container_width=True
+    )
+
+    st.subheader("Dataset Preview")
+
+    st.dataframe(df.head(10), use_container_width=True)
+
+    # -------------------------------------------------
+# PREDICTION PAGE
+# -------------------------------------------------
+
+elif page == "Prediction":
+
+    st.header("🎯 Student Prediction")
+
+    st.write("Enter the student's details below.")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        attendance = st.slider(
+            "Attendance (%)",
+            0,
+            100,
+            75
+        )
+
+        grades = st.slider(
+            "Average Grades",
+            0,
+            100,
+            70
+        )
+
+        study_hours = st.slider(
+            "Study Hours Per Day",
+            1,
+            10,
+            4
+        )
+
+        backlogs = st.slider(
+            "Number of Backlogs",
+            0,
+            10,
+            0
+        )
+
+    with col2:
+
+        family_income = st.selectbox(
+            "Family Income",
+            ["Low", "Medium", "High"]
+        )
+
+        scholarship = st.selectbox(
+            "Scholarship",
+            ["Yes", "No"]
+        )
+
+        internet = st.selectbox(
+            "Internet Access",
+            ["Yes", "No"]
+        )
+
+        gender = st.selectbox(
+            "Gender",
+            ["Male", "Female"]
         )
 
     st.divider()
 
-    st.subheader("Risk Level")
+    if st.button("Predict Student Status"):
 
-    if dropout_probability < 30:
+        income = encoders["FamilyIncome"].transform([family_income])[0]
+        scholar = encoders["Scholarship"].transform([scholarship])[0]
+        net = encoders["Internet"].transform([internet])[0]
+        gen = encoders["Gender"].transform([gender])[0]
 
-        st.success("🟢 LOW RISK")
+        sample = pd.DataFrame(
+            [[
+                attendance,
+                grades,
+                study_hours,
+                backlogs,
+                income,
+                scholar,
+                net,
+                gen
+            ]],
+            columns=[
+                "Attendance",
+                "Grades",
+                "StudyHours",
+                "Backlogs",
+                "FamilyIncome",
+                "Scholarship",
+                "Internet",
+                "Gender"
+            ]
+        )
 
-    elif dropout_probability < 70:
+        prediction = model.predict(sample)[0]
 
-        st.warning("🟡 MEDIUM RISK")
+        probability = model.predict_proba(sample)[0]
 
-    else:
+        continue_prob = probability[0] * 100
+        dropout_prob = probability[1] * 100
 
-        st.error("🔴 HIGH RISK")
+        st.divider()
 
-    st.divider()
+        st.subheader("Prediction Result")
 
-    st.subheader("Student Summary")
+        if prediction == 0:
 
-    st.table(data)
+            st.success("✅ Student is likely to CONTINUE")
 
-    st.divider()
+        else:
 
-    st.subheader("Recommendations")
+            st.error("⚠ Student is likely to DROP OUT")
 
-    if prediction == 1:
+        c1, c2 = st.columns(2)
 
-        st.write("• Improve attendance.")
-        st.write("• Reduce backlogs.")
-        st.write("• Increase study hours.")
-        st.write("• Provide academic counseling.")
-        st.write("• Encourage scholarship support if eligible.")
+        with c1:
 
-    else:
+            st.metric(
+                "Continue Probability",
+                f"{continue_prob:.2f}%"
+            )
 
-        st.write("• Keep up the good work.")
-        st.write("• Maintain attendance.")
-        st.write("• Continue regular study habits.")
+        with c2:
+
+            st.metric(
+                "Dropout Probability",
+                f"{dropout_prob:.2f}%"
+            )
+
+        st.progress(int(max(continue_prob, dropout_prob)))
+
+        st.divider()
+
+        st.subheader("Risk Level")
+
+        if dropout_prob < 30:
+
+            st.success("🟢 LOW RISK")
+
+        elif dropout_prob < 70:
+
+            st.warning("🟡 MEDIUM RISK")
+
+        else:
+
+            st.error("🔴 HIGH RISK")
+
+        st.divider()
+
+        st.subheader("Student Details")
+
+        display = pd.DataFrame({
+
+            "Feature":[
+                "Attendance",
+                "Grades",
+                "Study Hours",
+                "Backlogs",
+                "Family Income",
+                "Scholarship",
+                "Internet",
+                "Gender"
+            ],
+
+            "Value":[
+                attendance,
+                grades,
+                study_hours,
+                backlogs,
+                family_income,
+                scholarship,
+                internet,
+                gender
+            ]
+
+        })
+
+        st.table(display)
+
+        st.divider()
+
+        st.subheader("Recommendations")
+
+        if prediction == 1:
+
+            st.error("Immediate academic intervention recommended.")
+
+            st.write("• Improve attendance above 75%.")
+            st.write("• Reduce the number of backlogs.")
+            st.write("• Increase study hours to at least 4 hours/day.")
+            st.write("• Attend counseling sessions.")
+            st.write("• Meet academic mentor weekly.")
+            st.write("• Participate in remedial classes.")
+
+        else:
+
+            st.success("Student is performing well.")
+
+            st.write("• Maintain attendance.")
+            st.write("• Continue regular study.")
+            st.write("• Participate in extracurricular activities.")
+            st.write("• Aim to improve grades further.")
